@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "message-task-agent"
+version = "0.1.0"
+description = "Local-first incremental message and task planning prototype"
+license = {file = "LICENSE"}
+requires-python = ">=3.10"
+dependencies = ["jsonschema==4.26.0"]
+
+[project.optional-dependencies]
+planner = ["ortools==9.15.6755"]
+
+[project.scripts]
+message-task-agent = "taskagent.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+taskagent = ["static/*", "static/art/*", "static/vendor/*"]
+

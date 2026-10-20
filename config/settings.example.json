@@ -1,0 +1,23 @@
+{
+  "timezone": "Asia/Shanghai",
+  "database": "data/taskagent.sqlite3",
+  "data_dir": "data",
+  "mail": {
+    "host": "imap.qq.com",
+    "port": 993,
+    "readonly": true,
+    "max_per_folder_per_run": 25,
+    "first_run": "baseline"
+  },
+  "agent": {
+    "protocol": "json-stdio-v1",
+    "command": null,
+    "timeout_seconds": 120
+  },
+  "notifications": {
+    "channel": "email",
+    "mode": "preview",
+    "smtp_host": "smtp.qq.com",
+    "smtp_port": 465
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "qq-win-db-key": {
+    "commit": "5c643c39bdc65a7ce3ecc414052fdfd93d5f9107",
+    "license": "非商用开源协议 第1版"
+  },
+  "QQNT_Export": {
+    "commit": "714d228dcd52f74b06bec91d4dba6ab856f16cd1",
+    "license": "GPL-3.0"
+  },
+  "nt_msg_db_util": {
+    "commit": "317024ce2c5e3482fdf9f310a5a7159ab4927e34",
+    "license": "GPL-3.0"
+  },
+  "QQDecrypt": {
+    "commit": "0dba968ebcb9ba23a68571780eb6b53687f77493",
+    "license": "see upstream LICENSE"
+  }
+}

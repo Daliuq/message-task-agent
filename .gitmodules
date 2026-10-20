@@ -1,0 +1,12 @@
+[submodule "qq-nt-db-util"]
+	path = integrations/qq/vendor/nt_msg_db_util
+	url = https://github.com/QQBackup/nt_msg_db_util.git
+[submodule "qq-win-db-key"]
+	path = integrations/qq/vendor/qq-win-db-key
+	url = https://github.com/QQBackup/qq-win-db-key.git
+[submodule "qq-decrypt"]
+	path = integrations/qq/vendor/QQDecrypt
+	url = https://github.com/QQBackup/QQDecrypt.git
+[submodule "qqnt-export"]
+	path = integrations/qq/vendor/QQNT_Export
+	url = https://github.com/Tealina28/QQNT_Export.git

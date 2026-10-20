@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#f4f6f5">
+  <title>消息任务台</title>
+  <link rel="stylesheet" href="/app.css">
+  <script defer src="/vendor/gsap.min.js"></script>
+  <script defer src="/vendor/ScrollTrigger.min.js"></script>
+  <script defer src="/app.js"></script>
+  <script defer src="/exchange.js"></script>
+  <script defer src="/chat-import.js"></script>
+  <script defer src="/scheduled.js"></script>
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <a class="brand" href="#overview" aria-label="消息任务台首页">
+        <span class="brand-mark"><i></i><i></i><i></i><i></i></span>
+        <span><strong>message / task</strong><small>LOCAL WORKSPACE</small></span>
+      </a>
+      <div class="workspace-label">工作空间</div>
+      <nav class="navigation" aria-label="主导航">
+        <button class="nav-item active" data-view="overview"><span class="nav-icon icon-grid"></span>总览</button>
+        <button class="nav-item" data-view="mail"><span class="nav-icon icon-mail"></span>邮件收件箱<span class="nav-count" id="mailCount">0</span></button>
+        <button class="nav-item" data-view="subscriptions"><span class="nav-icon icon-pulse"></span>聊天订阅</button>
+        <button class="nav-item" data-view="scheduled"><span class="nav-icon icon-pulse"></span>定时任务结果</button>
+        <button class="nav-item" data-view="tasks"><span class="nav-icon icon-check"></span>任务清单<span class="nav-count" id="taskCount">0</span></button>
+        <button class="nav-item" data-view="activity"><span class="nav-icon icon-pulse"></span>采集与处理</button>
+        <button class="nav-item" data-view="exchange"><span class="nav-icon icon-mail"></span>数据交换</button>
+        <button class="nav-item" data-view="outbox"><span class="nav-icon icon-send"></span>邮件通知</button>
+      </nav>
+      <div class="sidebar-bottom">
+        <div class="local-card"><span class="local-dot"></span><div><strong>本地运行</strong><small>数据保存在此设备</small></div></div>
+        <div class="sidebar-caption">MESSAGE TASK AGENT <span>0.1</span></div>
+      </div>
+    </aside>
+
+    <main class="main-area">
+      <header class="topbar">
+        <div class="mobile-brand"><span class="brand-mark"><i></i><i></i><i></i><i></i></span>消息任务台</div>
+        <div class="breadcrumb"><span>工作空间</span><b>/</b><strong id="crumbTitle">总览</strong></div>
+        <div class="top-actions">
+          <label class="search-box"><span class="search-icon"></span><input id="searchInput" type="search" placeholder="搜索当前列表" aria-label="搜索当前列表"><kbd>⌘ K</kbd></label>
+          <button class="icon-button" id="refreshButton" title="刷新本地数据" aria-label="刷新本地数据"><span class="refresh-icon"></span></button>
+          <button class="avatar" title="本机数据">本</button>
+        </div>
+      </header>
+
+      <div class="content-wrap">
+        <section class="page-heading">
+          <div class="heading-copy">
+            <div class="eyebrow"><span class="eyebrow-line"></span><span id="pageEyebrow">本地工作台</span></div>
+            <h1 id="pageTitle">让消息有序。</h1>
+            <p id="pageDescription">邮件增量、聊天订阅范围、待办与处理记录，集中在一个本地工作台。</p>
+            <div class="heading-actions">
+              <div class="sync-note"><span class="sync-dot" id="syncDot"></span><span id="syncLabel">正在连接本地数据库</span></div>
+              <div class="hero-actions"><button class="button button-primary" id="scanButton"><span class="scan-glyph">↻</span><span>扫描邮箱</span></button><button class="button button-quiet" data-jump="tasks">查看待办 <span>↗</span></button></div>
+            </div>
+          </div>
+          <div class="hero-art" aria-hidden="true"><img id="heroVisual" class="hero-visual" src="/art/workflow.svg" alt=""><span class="hero-art-glow"></span></div>
+        </section>
+
+        <section id="view-overview" class="view-panel active" aria-label="总览">
+          <div class="signal-marquee" aria-label="信息处理流程"><div class="signal-track" id="signalTrack" aria-hidden="true"><div class="signal-group"><span>消息采集</span><i></i><span>持久化记录</span><i></i><span>任务归并</span><i></i><span>优先级规划</span><i></i></div><div class="signal-group"><span>消息采集</span><i></i><span>持久化记录</span><i></i><span>任务归并</span><i></i><span>优先级规划</span><i></i></div></div></div>
+          <div class="metric-grid" id="metricGrid"></div>
+          <div class="overview-grid">
+            <section class="panel inbox-panel">
+              <div class="panel-header"><div><h2>最近邮件</h2><p>从已持久化的增量中查看</p></div><div class="carousel-controls"><span id="mailCarouselCount" class="carousel-count">0 封</span><button class="carousel-button" data-mail-carousel="prev" aria-label="上一封邮件">←</button><button class="carousel-button" data-mail-carousel="next" aria-label="下一封邮件">→</button></div></div>
+              <div id="recentMail" class="mail-preview-list" aria-live="polite"></div>
+              <button class="text-button inbox-all" data-jump="mail">打开收件箱 <span>↗</span></button>
+            </section>
+            <section class="panel pipeline-panel">
+              <div class="panel-header"><div><h2>处理进度</h2><p>采集和任务消费分开记录</p></div><span class="live-chip"><i></i>实时数据</span></div>
+              <div class="pipeline" id="pipeline"></div>
+              <div class="agent-callout"><span class="callout-mark">i</span><p id="pipelineHint">任务 Agent 尚未消费待处理事件。</p></div>
+            </section>
+          </div>
+          <section class="panel folder-panel">
+            <div class="panel-header"><div><h2>邮箱文件夹状态</h2><p>每个文件夹独立维护增量游标</p></div><span class="panel-meta" id="folderTotal">0 个文件夹</span></div>
+            <div class="folder-grid" id="folderGrid"></div>
+          </section>
+        </section>
+
+        <section id="view-mail" class="view-panel" aria-label="邮件收件箱">
+          <div class="list-toolbar"><div><strong id="mailSummary">邮件</strong><span>只显示已保存到本地数据库的内容</span></div><div class="toolbar-chip"><span class="tiny-dot"></span>只读邮件</div></div>
+          <div class="range-toolbar"><div class="range-copy"><strong>按时间范围全量补扫</strong><span>按收件时间筛选；结束日期含当天，不改变增量游标</span></div><div class="range-controls"><label>开始<input id="rangeStart" type="date" aria-label="范围开始日期"></label><span class="range-separator">至</span><label>结束<input id="rangeEnd" type="date" aria-label="范围结束日期"></label><button class="button button-secondary" id="rangeScanButton">全量扫描范围</button></div></div>
+          <div id="mailList" class="mail-list panel"></div>
+        </section>
+
+        <section id="view-subscriptions" class="view-panel" aria-label="聊天订阅">
+          <div class="subscription-note"><span class="callout-mark">i</span><p><strong>发现会话与导入正文是两步。</strong> 微信和 QQ 扫描先发现本机会话列表，默认全不选；由你勾选订阅后，再在下方导入正文。读取失败不会当成空记录。</p></div>
+          <section class="panel discovery-panel">
+            <div class="panel-header"><div><h2>扫描并发现会话</h2><p>扫描结果保存在本地；每次扫描后默认不勾选任何新会话</p></div><span class="panel-meta">发现 · 选择 · 管理</span></div>
+            <div class="discovery-platforms">
+              <div class="discovery-platform"><div><span class="platform-chip wechat">微信</span><span class="discovery-status" id="wechatDiscoveryStatus">尚未扫描</span></div><button class="button button-secondary" type="button" data-discover-chat="wechat">扫描微信会话</button></div>
+              <div class="discovery-platform"><div><span class="platform-chip qq">QQ</span><span class="discovery-status" id="qqDiscoveryStatus">尚未扫描</span></div><button class="button button-secondary" type="button" data-discover-chat="qq">扫描 QQ 会话</button></div>
+            </div>
+            <div class="chat-discovery-filters"><label>平台<select id="chatDiscoveryPlatform"><option value="">全部平台</option><option value="qq">QQ</option><option value="wechat">微信</option></select></label><label>类型<select id="chatDiscoveryType"><option value="">全部类型</option><option value="group">群聊</option><option value="private">私聊</option></select></label><span id="chatDiscoveryCount" class="panel-meta"></span></div>
+            <div class="chat-transfer" aria-label="聊天订阅穿梭框">
+              <section class="transfer-pane" aria-label="可订阅聊天">
+                <header><div><h3>可订阅聊天</h3><span id="transferAvailableCount">0 个</span></div><label class="transfer-search"><span class="sr-only">搜索可订阅聊天</span><input id="chatDiscoverySearch" type="search" placeholder="搜索群名、群号、好友或标签" autocomplete="off"></label><label class="transfer-select-all"><input id="transferAllLeft" type="checkbox">勾选当前结果<span id="transferLeftChecked"></span></label></header>
+                <div id="chatCandidateList" class="transfer-list" role="group" aria-label="可订阅聊天列表"></div>
+              </section>
+              <div class="transfer-actions"><button id="transferAdd" class="button button-primary" type="button" disabled>加入订阅 →</button><button id="transferRemove" class="button button-secondary" type="button" disabled>← 移出订阅</button><span>先勾选，再移动</span></div>
+              <section class="transfer-pane transfer-pane-selected" aria-label="已选订阅">
+                <header><div><h3>已选订阅</h3><span id="transferSelectedCount">0 个</span></div><label class="transfer-search"><span class="sr-only">搜索已选订阅</span><input id="chatSelectedSearch" type="search" placeholder="搜索已选群名、群号或标签" autocomplete="off"></label><label class="transfer-select-all"><input id="transferAllRight" type="checkbox">勾选当前结果<span id="transferRightChecked"></span></label></header>
+                <div id="chatSelectedList" class="transfer-list" role="group" aria-label="已选订阅列表"></div>
+              </section>
+            </div>
+            <div class="candidate-selection-bar transfer-save-bar"><div><strong id="selectedChatCount" aria-live="polite">没有待保存变更</strong><label class="candidate-full-scan"><input id="newChatsFullScan" type="checkbox">新增订阅参与全量扫描</label><p>保存后才生效；移出只停用订阅，历史消息与标签保留。</p></div><div class="transfer-save-actions"><button id="resetChatSelections" class="button button-secondary" type="button" disabled>撤销变更</button><button class="button button-primary" id="saveChatSelections" type="button" disabled>保存订阅变更</button></div></div>
+          </section>
+          <section class="panel subscriptions-panel">
+            <div class="panel-header"><div><h2>已选择的扫描范围</h2><p>由扫描结果创建；账号和会话标识由程序维护，可在配置页调整扫描选项</p></div><span class="panel-meta" id="subscriptionCount">0 个会话</span></div>
+            <div class="chat-tag-filter"><label for="subscriptionTagFilter">按标签筛选</label><select id="subscriptionTagFilter"><option value="">全部标签</option><option value="__untagged__">未分类</option></select><span class="panel-meta">一个聊天可关联多个自定义标签，微信 / QQ 共用</span></div>
+            <div id="subscriptionList" class="subscription-list"></div>
+          </section>
+          <section class="panel chat-import-panel">
+            <div class="panel-header"><div><h2>聊天正文导入</h2><p>分片分页保存原始字段、正文和进度；导入不启动 LLM，不发送消息</p></div><button class="button button-secondary" id="chatImportRefresh" type="button">刷新导入记录</button></div>
+            <form id="chatImportForm" class="chat-import-form">
+              <label>平台<select id="chatImportPlatform"><option value="qq">QQ</option><option value="wechat">微信</option></select></label>
+              <label>导入方式<select id="chatImportMode"><option value="full">本地全部历史</option><option value="range">指定时间范围</option><option value="incremental">新消息增量</option></select></label>
+              <div id="chatImportDates" class="chat-import-dates" hidden><label>开始日期（北京时间）<input id="chatImportStart" type="date"></label><label>结束日期（含当天）<input id="chatImportEnd" type="date"></label></div>
+              <fieldset><legend>选择已配置的聊天 · 默认全不选</legend><div id="chatImportScopes" class="chat-import-scope-list"></div></fieldset>
+              <button type="submit" class="button button-primary" id="chatImportStartButton">开始导入正文</button>
+            </form>
+            <p class="panel-meta">全量/范围导入要求会话同时开启订阅和参与全量扫描；增量只要求订阅启用。QQ 增量逐条核对原始指纹，仅保存新增或变化，不按发送时间跳过补同步记录。仅导入本机实际可读取的数据；保存消息原始字段及媒体占位，不复制外部图片/语音/视频文件，也不代表云端历史齐全。</p>
+            <p id="chatImportFeedback" role="status" class="chat-import-feedback">尚未启动导入。</p>
+            <details class="chat-import-qq"><summary>QQ 本地数据读取状态</summary><p id="qqLocalReadStatus" class="panel-meta">展开或刷新本页后显示检测结果。</p></details>
+            <div id="chatImportJobs" class="chat-import-jobs"></div>
+          </section>
+          <section class="panel chat-import-panel"><div class="panel-header"><div><h2>已保存的聊天正文</h2><p>展示最近 50 条；数据库保存本次所有已导入记录，完整导出请前往数据交换</p></div></div><div id="chatImportedMessages" class="chat-imported-messages"></div></section>
+        </section>
+
+        <section id="view-scheduled" class="view-panel" aria-label="定时任务结果">
+          <div class="subscription-note"><span class="callout-mark">i</span><p><strong>扫描结果，不改定时安排。</strong>扫描本机全部可读的 Codex 定时运行与 ChatGPT 本地结果收件箱。ChatGPT 网页／客户端自动读取尚未连接；空收件箱不代表云端没有结果。只有完整正文进入待解析队列，不自动生成或完成待办。</p></div>
+          <section class="panel scheduled-panel">
+            <div class="panel-header"><div><h2>两个来源，一起核对</h2><p>按任务 ID 与运行 ID 去重；同一次结果变化留版本，不同次提醒保留各自时间。</p></div><button id="scheduledScan" class="button button-primary" type="button">扫描全部定时结果</button></div>
+            <div id="scheduledSources" class="scheduled-sources"></div>
+            <p id="scheduledFeedback" class="scheduled-feedback" role="status" aria-live="polite">加载本地状态…</p>
+            <details class="scheduled-import"><summary>接收 ChatGPT 结果文件 / 查看接入说明</summary><p>将标准结果 JSON 放进下面的本地收件箱，下次扫描会自动发现；也可以在此导入。必须保留真实的任务与运行 ID，不能每次随机生成。通知摘要标为 summary，不会当作完整正文解析。</p><code id="scheduledInbox"></code><p>网页端尚未打通自动抓取；此入口不使用或读取登录凭据。</p><a class="text-button" href="/api/scheduled/example" download="scheduled-results.example.json">下载格式示例（不是实际数据） ↗</a><form id="scheduledImportForm" class="exchange-form"><label>结果包 JSON<input id="scheduledImportFile" type="file" accept=".json,application/json"></label><label>或粘贴结果包<textarea id="scheduledImportText" rows="6" placeholder="mta.scheduled-results · 1.0"></textarea></label><button id="scheduledImportButton" class="button button-secondary" type="submit">保存并导入结果</button></form></details>
+          </section>
+          <section class="panel scheduled-panel"><div class="panel-header"><div><h2>已保存的执行结果</h2><p>展开查看完整正文；运行状态与待办状态分开记录。显示最近 100 条，完整数据可在数据交换中导出。</p></div><button id="scheduledRefresh" class="button button-secondary" type="button">刷新记录</button></div><div class="scheduled-filter"><label>来源<select id="scheduledProvider"><option value="">全部来源</option><option value="codex">Codex</option><option value="chatgpt">ChatGPT</option></select></label><label>搜索结果<input id="scheduledSearch" type="search" placeholder="标题、任务 ID 或正文"></label><span id="scheduledCount" class="panel-meta"></span></div><div id="scheduledMessages" class="scheduled-messages"></div></section>
+        </section>
+
+        <section id="view-tasks" class="view-panel" aria-label="任务清单">
+          <div class="list-toolbar"><div><strong>任务状态</strong><span>状态变更会写入任务历史</span></div><div class="filter-group"><button class="filter-button selected" data-task-filter="all">全部</button><button class="filter-button" data-task-filter="open">待处理</button><button class="filter-button" data-task-filter="completed">已完成</button></div></div>
+          <div id="taskList" class="task-list"></div>
+        </section>
+
+        <section id="view-activity" class="view-panel" aria-label="采集与处理">
+          <div class="activity-layout">
+            <aside class="activity-intro"><div class="eyebrow"><span class="eyebrow-line"></span>可追溯流水</div><h2>每次采集，<br>都有来处。</h2><p>扫描、入库与 Agent 消费各自留痕；你可以从这里核对每一步是否真正发生。</p><div class="activity-legend"><span class="legend-dot"></span>本地记录，不会自动触发外部操作</div></aside>
+            <div class="activity-stack">
+              <section class="panel"><div class="panel-header"><div><h2>扫描记录</h2><p>邮箱文件夹逐次扫描状态</p></div><span class="panel-meta">时间范围与增量</span></div><div id="scanList" class="activity-list"></div></section>
+              <section class="panel"><div class="panel-header"><div><h2>事件消费</h2><p>新增消息与 Agent 消费状态</p></div><span class="panel-meta">独立消费日志</span></div><div id="eventList" class="activity-list"></div></section>
+            </div>
+          </div>
+        </section>
+
+        <section id="view-exchange" class="view-panel" aria-label="数据交换">
+          <div class="subscription-note"><span class="callout-mark">i</span><p><strong>D1 · 本地文件交换。</strong>导出请求包和提示词，在网页聊天处理后导入结果。网页自动提交与 API 通道尚未接入；当前解析出的候选只进入待确认区，不自动合并、创建正式任务或发送邮件。</p></div>
+          <div class="exchange-grid">
+            <section class="panel exchange-editor">
+              <div class="panel-header"><div><h2>导出待处理消息</h2><p>只读取本地已保存的数据，不触发账号扫描</p></div></div>
+              <form id="exchangeExportForm" class="exchange-form">
+                <fieldset><legend>来源范围 · 默认不选</legend><div id="exchangeScopes" class="exchange-scopes">选择此页面后加载本地范围</div></fieldset>
+                <label>导出方式<select id="exchangeMode"><option value="pending">所有待解析（包含取消后重试）</option><option value="incremental">检查点之后的待解析增量</option><option value="range">按源时间范围选择待解析</option></select></label>
+                <div id="exchangeRangeFields" class="exchange-dates" hidden><label>开始（北京时间）<input id="exchangeStart" type="date"></label><label>结束（含当天）<input id="exchangeEnd" type="date"></label></div>
+                <label>每批最多消息数<input id="exchangeLimit" type="number" min="1" max="1000" value="100" required></label>
+                <div class="exchange-actions"><button id="exchangeExportButton" class="button button-primary" type="submit">创建导出批次</button><a class="text-button" href="/api/prompts/task-extractor/export" download="prompt.json">只下载提示词</a></div>
+                <p class="exchange-hint">创建后为这次解析预留事件；导出不等于消费成功。范围导出会排除缺少可靠源时间的消息，不使用导入日期代替。</p>
+              </form>
+            </section>
+            <section class="panel exchange-editor">
+              <div class="panel-header"><div><h2>导入并核对</h2><p>先预检再应用；重复导入不会增加任务或提醒</p></div></div>
+              <form id="exchangeImportForm" class="exchange-form">
+                <label>文件类型<select id="exchangeImportKind"><option value="results">解析结果 analysis-result.json</option><option value="messages">原始消息 messages.json</option></select></label>
+                <label>选择文件<input id="exchangeImportFile" type="file" accept=".json,.txt,application/json,text/plain"></label>
+                <label>或粘贴完整 JSON 回复<textarea id="exchangeImportText" rows="8" placeholder="可粘贴包含单个 JSON 代码围栏的回复"></textarea></label>
+                <div class="exchange-actions"><button id="exchangePreviewButton" class="button button-secondary" type="submit">预检内容</button><button id="exchangeApplyButton" class="button button-primary" type="button" disabled>确认应用预检</button></div>
+              </form>
+              <pre id="exchangeImportReport" class="exchange-report" aria-live="polite">尚未预检。消息导入默认隔离为文件来源，不更改真实账号游标。</pre>
+            </section>
+          </div>
+          <p id="exchangeStatus" class="exchange-status" role="status" aria-live="polite"></p>
+          <section class="panel exchange-history"><div class="panel-header"><div><h2>导出与解析批次</h2><p>下载文件、核对缺失结果或恢复未完成输出</p></div><button id="exchangeRefreshButton" class="text-button" type="button">刷新批次</button></div><div id="exchangeBatches"></div></section>
+          <section class="panel exchange-history"><div class="panel-header"><div><h2>解析候选 · 待确认</h2><p>尚未经过 RAG＋时间归并；这里不是已创建的任务清单</p></div></div><div id="exchangeCandidates"></div></section>
+        </section>
+
+        <section id="view-outbox" class="view-panel" aria-label="邮件通知">
+          <div class="list-toolbar"><div><strong>通知队列</strong><span>这里仅查看预览与投递记录，不会自动发送</span></div><div class="toolbar-chip"><span class="tiny-dot"></span>需要明确触发投递</div></div>
+          <div id="outboxList" class="outbox-list"></div>
+        </section>
+
+        <footer class="page-footer"><span>消息任务台 <b>·</b> 本地优先</span><span id="databaseLabel">SQLite 数据库</span></footer>
+      </div>
+    </main>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <dialog id="mailDialog" class="mail-dialog"><div class="dialog-head"><div><span class="eyebrow">邮件详情</span><h2 id="dialogSubject"></h2></div><button class="dialog-close" id="closeDialog" aria-label="关闭">×</button></div><div class="dialog-meta" id="dialogMeta"></div><div class="dialog-body" id="dialogBody"></div><div class="dialog-foot"><span id="dialogFolder"></span><span id="dialogEventStatus"></span></div></dialog>
+  <dialog id="subscriptionConfigDialog" class="subscription-config-dialog" aria-labelledby="subscriptionConfigTitle">
+    <div class="dialog-head"><div><span class="eyebrow">已发现会话设置</span><h2 id="subscriptionConfigTitle">调整扫描范围</h2><p id="subscriptionConfigDescription">会话由自动扫描发现；这里只更改是否订阅和是否参与全量扫描。</p></div><button class="dialog-close" id="closeSubscriptionConfig" type="button" aria-label="关闭配置">×</button></div>
+    <div class="subscription-config-note">账号与稳定聊天 / 群 ID 由扫描器保存，不支持手动新建或修改。未勾选订阅启用的会话不会进入后续扫描。</div>
+    <form id="subscriptionForm" class="subscription-form">
+      <label>平台<select id="subscriptionPlatform" required disabled><option value="wechat">微信</option><option value="qq">QQ</option></select></label>
+      <label>账号标识<input id="subscriptionAccount" type="text" maxlength="200" required readonly></label>
+      <label>会话标识<input id="subscriptionConversation" type="text" maxlength="500" required readonly></label>
+      <label>显示名称<input id="subscriptionName" type="text" maxlength="300" required readonly></label>
+      <fieldset class="chat-tag-editor"><legend>自定义标签 · 可多选</legend><p class="panel-meta">例如工作、生活、招聘。点击标签切换选择；每个聊天最多 20 个。保存配置后生效，不改变扫描开关。</p><div id="subscriptionTagChoices" class="chat-tag-choices"></div><div class="chat-tag-create"><label for="subscriptionTagName">新标签名称<input id="subscriptionTagName" type="text" maxlength="32" placeholder="例如：工作"></label><button id="addSubscriptionTag" class="button button-secondary" type="button">添加标签</button></div><p id="subscriptionTagFeedback" class="panel-meta" aria-live="polite">未选择标签</p></fieldset>
+      <div class="subscription-options"><label><input id="subscriptionEnabled" type="checkbox">订阅启用</label><label><input id="subscriptionFullScan" type="checkbox">参与全量扫描</label></div>
+      <div class="subscription-dialog-actions"><button class="button button-quiet" id="cancelSubscriptionConfig" type="button">取消</button><button class="button button-primary" type="submit">保存配置</button></div>
+    </form>
+  </dialog>
+</body>
+</html>
